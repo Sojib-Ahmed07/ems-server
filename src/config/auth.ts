@@ -1,9 +1,19 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "../config/prisma.js";
-import { Resend } from "resend";
+import { BrevoClient } from "@getbrevo/brevo";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// ✅ FIX: Modern Brevo SDK initialization using the new unified BrevoClient wrapper
+const brevo = new BrevoClient({
+  apiKey: process.env.BREVO_API_KEY as string,
+});
+
+// NOTE: Brevo requires a sender identity. Replace this with the real email
+// address you used to create your Brevo account so your tests go through immediately.
+const BREVO_SENDER = {
+  name: "EMS Administration",
+  email: "menarebrave7878@gmail.com",
+};
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -17,7 +27,6 @@ export const auth = betterAuth({
   },
   trustedOrigins: [process.env.CLIENT_URL || "http://localhost:3000"],
 
-  // 👇 GOOGLE OAUTH CONFIGURATION ADDED HERE
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -30,11 +39,10 @@ export const auth = betterAuth({
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url, token }) => {
       try {
-        await resend.emails.send({
-          from: "EMS Auth <onboarding@resend.dev>",
-          to: user.email,
+        // ✅ FIX: Using namespaced transactional email client methods directly
+        await brevo.transactionalEmails.sendTransacEmail({
           subject: "Reset your EMS Password",
-          html: `
+          htmlContent: `
             <div style="font-family: sans-serif; padding: 20px; max-width: 600px;">
               <h2>Password Reset Request</h2>
               <p>Hello ${user.name || "User"},</p>
@@ -45,10 +53,16 @@ export const auth = betterAuth({
               <p>If you did not request this, you can safely ignore this email.</p>
             </div>
           `,
+          sender: BREVO_SENDER,
+          to: [{ email: user.email, name: user.name || "User" }],
         });
+
+        console.log(
+          `✉️ Password reset link cleanly dispatched via Brevo to: ${user.email}`,
+        );
       } catch (error) {
         console.error(
-          "❌ Failed to send password reset email via Resend:",
+          "❌ Failed to send password reset email via Brevo:",
           error,
         );
       }
@@ -58,11 +72,10 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     sendVerificationEmail: async ({ user, url, token }) => {
       try {
-        await resend.emails.send({
-          from: "EMS Auth <onboarding@resend.dev>",
-          to: user.email,
+        // ✅ FIX: Simplified inline request schema map
+        await brevo.transactionalEmails.sendTransacEmail({
           subject: "Verify your EMS Email Address",
-          html: `
+          htmlContent: `
             <div style="font-family: sans-serif; padding: 20px; max-width: 600px;">
               <h2>Welcome to EMS!</h2>
               <p>Hello ${user.name || "User"},</p>
@@ -73,12 +86,15 @@ export const auth = betterAuth({
               <p>Thank you!</p>
             </div>
           `,
+          sender: BREVO_SENDER,
+          to: [{ email: user.email, name: user.name || "User" }],
         });
-      } catch (error) {
-        console.error(
-          "❌ Failed to send verification email via Resend:",
-          error,
+
+        console.log(
+          `✉️ Email verification packet dispatched via Brevo to: ${user.email}`,
         );
+      } catch (error) {
+        console.error("❌ Failed to send verification email via Brevo:", error);
       }
     },
   },
