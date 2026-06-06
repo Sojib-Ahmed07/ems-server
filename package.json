@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-  "dev": "tsx watch src/index.ts", 
-  "build": "tsc && npx prisma generate",
+  "dev": "tsx watch src/index.ts",
+  "build": "npx prisma generate && tsc",
   "start": "node dist/index.js"
 },
   "keywords": [],
