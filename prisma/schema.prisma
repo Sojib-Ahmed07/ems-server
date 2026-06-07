@@ -130,6 +130,10 @@ model Attendance {
   clockOut DateTime?
   status   AttendanceStatus @default(PRESENT)
 
+  // Geolocation Perimeter Verification Tracking
+  lat      Float?
+  lng      Float?
+
   employeeId String
   employee   EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 

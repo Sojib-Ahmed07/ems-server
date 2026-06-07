@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "attendance" ADD COLUMN     "lat" DOUBLE PRECISION,
+ADD COLUMN     "lng" DOUBLE PRECISION;

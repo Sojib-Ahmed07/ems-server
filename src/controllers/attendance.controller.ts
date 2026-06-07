@@ -2,13 +2,69 @@ import { Request, Response } from "express";
 import { prisma } from "../config/prisma";
 
 /**
- * Logs a standard Clock-In action for the day.
+ * Utility: Haversine mathematical algorithm calculating distance between
+ * two geographical points in kilometers.
+ */
+function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const R = 6371; // Earth's Radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Logs a standard Clock-In action for the day with perimeter geofence validation.
  */
 export const clockIn = async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
+    const { coords } = req.body; // Expects structural format: { lat: number, lng: number }
 
-    // 1. Locate the employee profile footprint
+    // 🏢 CHANGE THESE TO MATCH YOUR EXACT PHYSICAL OFFICE COORDINATES
+    const OFFICE_LAT = 40.7128;
+    const OFFICE_LNG = -74.006;
+    const PERMITTED_RADIUS_KM = 0.2; // 200 Meters geofencing lock boundary limit
+
+    // 1. Validate perimeter telemetry presence
+    if (
+      !coords ||
+      typeof coords.lat !== "number" ||
+      typeof coords.lng !== "number"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Bad Request: Precise device positioning telemetry coordinates are required to clock in.",
+      });
+    }
+
+    // 2. Execute Haversine validation calculation check
+    const spaceDistance = calculateDistance(
+      coords.lat,
+      coords.lng,
+      OFFICE_LAT,
+      OFFICE_LNG,
+    );
+    if (spaceDistance > PERMITTED_RADIUS_KM) {
+      return res.status(403).json({
+        success: false,
+        message: `Clock-In Forbidden: You are outside the authorized workspace parameter boundaries (${Math.round(spaceDistance * 1000)} meters away).`,
+      });
+    }
+
+    // 3. Locate the employee profile footprint
     const profile = await prisma.employeeProfile.findUnique({
       where: { userId },
     });
@@ -20,11 +76,11 @@ export const clockIn = async (req: Request, res: Response) => {
       });
     }
 
-    // 2. Derive a standardized date string for today (Midnight UTC reference normalized)
+    // 4. Derive a standardized date string for today (Midnight UTC reference normalized)
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
-    // 3. Check if the user has already recorded a clock-in parameter today
+    // 5. Check if the user has already recorded a clock-in parameter today
     const existingRecord = await prisma.attendance.findUnique({
       where: {
         employeeId_date: {
@@ -42,36 +98,37 @@ export const clockIn = async (req: Request, res: Response) => {
       });
     }
 
-    // 4. Automatic Business Logic rule: flag as LATE if checking in after 09:30 AM local system time
+    // 6. Automatic Business Logic rule: flag as LATE if checking in after 09:30 AM local system time
     const now = new Date();
     let computedStatus: "PRESENT" | "LATE" = "PRESENT";
     if (now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 30)) {
       computedStatus = "LATE";
     }
 
-    // 5. Commit record to PostgreSQL
+    // 7. Commit record to PostgreSQL with validated coordinates
     const attendanceRecord = await prisma.attendance.create({
       data: {
         employeeId: profile.id,
         date: today,
         clockIn: now,
         status: computedStatus,
+        lat: coords.lat,
+        lng: coords.lng,
       },
     });
 
     return res.status(201).json({
       success: true,
-      message: "Successfully clocked in for today's operational shift.",
+      message:
+        "Successfully clocked in for today's operational shift within workplace boundaries.",
       data: attendanceRecord,
     });
   } catch (error) {
     console.error("Clock In Error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Internal server error logging check-in.",
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error logging check-in.",
+    });
   }
 };
 
@@ -137,12 +194,10 @@ export const clockOut = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Clock Out Error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Internal server error logging checkout.",
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error logging checkout.",
+    });
   }
 };
 
@@ -224,11 +279,9 @@ export const getLiveOnSiteGrid = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Get Live Staff Error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to assemble active workforce rosters.",
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to assemble active workforce rosters.",
+    });
   }
 };

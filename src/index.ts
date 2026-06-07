@@ -6,6 +6,7 @@ import employeeRoutes from "./routes/employee.routes";
 import departmentRoutes from "./routes/department.routes"
 import attendanceRoutes from "./routes/attendance.routes";
 import leaveRoutes from "./routes/leave.routes";
+import analyticsRoutes from "./routes/analytics.routes";
 
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
@@ -25,6 +26,7 @@ app.use("/api/employees", employeeRoutes);
 app.use("/api/departments", departmentRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/leaves", leaveRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res
