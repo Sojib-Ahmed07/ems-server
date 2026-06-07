@@ -43,7 +43,11 @@ export const auth = betterAuth({
         },
   },
 
-  trustedOrigins: [process.env.CLIENT_URL || "http://localhost:3000"],
+  trustedOrigins: [
+    process.env.CLIENT_URL || "http://localhost:3000",
+    "https://ems-client-sable-three.vercel.app",
+    "http://localhost:3000",
+  ],
 
   socialProviders: {
     google: {
