@@ -3,6 +3,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "../config/prisma.js";
 import { BrevoClient } from "@getbrevo/brevo";
 
+// Modern Brevo SDK initialization using the new unified BrevoClient wrapper
 const brevo = new BrevoClient({
   apiKey: process.env.BREVO_API_KEY as string,
 });
@@ -12,10 +13,7 @@ const BREVO_SENDER = {
   email: "menarebrave7878@gmail.com",
 };
 
-// Explicit Production Constants
-const PROD_CLIENT = "https://ems-client-sable-three.vercel.app";
-const PROD_SERVER = "https://ems-server-dsh5.onrender.com";
-
+// Check if we are running live in production
 const isProd = process.env.NODE_ENV === "production";
 
 export const auth = betterAuth({
@@ -23,51 +21,34 @@ export const auth = betterAuth({
     provider: "postgresql",
   }),
 
-  // Use explicit environment variables with production fallbacks
-  baseURL: process.env.SERVER_URL || PROD_SERVER,
+  baseURL: process.env.SERVER_URL || "http://localhost:5000",
   basePath: "/api/auth",
 
   advanced: {
     disableOriginCheck: !isProd,
+
+    // 🌐 Dynamic Security Configuration
+    // Forces secure configurations only on live platforms (Render), allowing localhost to accept cookies normally.
     useSecureCookies: isProd,
 
     defaultCookieAttributes: isProd
       ? {
           sameSite: "none",
           secure: true,
-          partitioned: true,
+          partitioned: true, // Needed for cross-site cookie tracking compliance on Render
         }
       : {
           sameSite: "lax",
-          secure: false,
+          secure: false, // 🛠️ Essential for local HTTP environments to successfully save the session token
         },
   },
 
-  // Ensure these match your actual deployment URLs exactly
-  trustedOrigins: [
-    process.env.CLIENT_URL || PROD_CLIENT,
-    "http://localhost:3000",
-  ],
+  trustedOrigins: [process.env.CLIENT_URL || "http://localhost:3000"],
 
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-    },
-  },
-
-  // Added Callback Validation to stop "undefined/dashboard" errors
-  callbacks: {
-    onCallback: (url) => {
-      const allowedOrigins = [
-        process.env.CLIENT_URL || PROD_CLIENT,
-        "http://localhost:3000",
-      ];
-      if (!allowedOrigins.some((origin) => url.startsWith(origin))) {
-        return {
-          redirect: `${process.env.CLIENT_URL || PROD_CLIENT}/dashboard`,
-        };
-      }
     },
   },
 
@@ -82,15 +63,25 @@ export const auth = betterAuth({
             <div style="font-family: sans-serif; padding: 20px; max-width: 600px;">
               <h2>Password Reset Request</h2>
               <p>Hello ${user.name || "User"},</p>
-              <p>We received a request to reset your password.</p>
-              <p><a href="${url}">Reset Password</a></p>
+              <p>We received a request to reset your password for your Employee Management System account.</p>
+              <p style="margin: 24px 0;">
+                <a href="${url}" style="background-color: #000000; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Reset Password</a>
+              </p>
+              <p>If you did not request this, you can safely ignore this email.</p>
             </div>
           `,
           sender: BREVO_SENDER,
           to: [{ email: user.email, name: user.name || "User" }],
         });
+
+        console.log(
+          `✉️ Password reset link cleanly dispatched via Brevo to: ${user.email}`,
+        );
       } catch (error) {
-        console.error("❌ Failed to send reset email:", error);
+        console.error(
+          "❌ Failed to send password reset email via Brevo:",
+          error,
+        );
       }
     },
   },
@@ -99,19 +90,27 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({ user, url, token }) => {
       try {
         await brevo.transactionalEmails.sendTransacEmail({
-          subject: "Verify your EMS Email",
+          subject: "Verify your EMS Email Address",
           htmlContent: `
             <div style="font-family: sans-serif; padding: 20px; max-width: 600px;">
               <h2>Welcome to EMS!</h2>
-              <p>Please confirm your email address.</p>
-              <p><a href="${url}">Verify Email</a></p>
+              <p>Hello ${user.name || "User"},</p>
+              <p>Please confirm your email address to complete your registration setup.</p>
+              <p style="margin: 24px 0;">
+                <a href="${url}" style="background-color: #0070f3; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Verify Email Address</a>
+              </p>
+              <p>Thank you!</p>
             </div>
           `,
           sender: BREVO_SENDER,
           to: [{ email: user.email, name: user.name || "User" }],
         });
+
+        console.log(
+          `✉️ Email verification packet dispatched via Brevo to: ${user.email}`,
+        );
       } catch (error) {
-        console.error("❌ Failed to send verification email:", error);
+        console.error("❌ Failed to send verification email via Brevo:", error);
       }
     },
   },
