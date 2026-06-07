@@ -3,13 +3,11 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "../config/prisma.js";
 import { BrevoClient } from "@getbrevo/brevo";
 
-// ✅ FIX: Modern Brevo SDK initialization using the new unified BrevoClient wrapper
+// Modern Brevo SDK initialization using the new unified BrevoClient wrapper
 const brevo = new BrevoClient({
   apiKey: process.env.BREVO_API_KEY as string,
 });
 
-// NOTE: Brevo requires a sender identity. Replace this with the real email
-// address you used to create your Brevo account so your tests go through immediately.
 const BREVO_SENDER = {
   name: "EMS Administration",
   email: "menarebrave7878@gmail.com",
@@ -22,9 +20,22 @@ export const auth = betterAuth({
 
   baseURL: process.env.SERVER_URL || "http://localhost:5000",
   basePath: "/api/auth",
+
   advanced: {
     disableOriginCheck: process.env.NODE_ENV !== "production",
+    // ⚠️ CRITICAL STEP 1: Forces cookies to be flagged as Secure across all environments
+    // so modern browsers accept SameSite=None tracking properties.
+    useSecureCookies: true,
+
+    // ⚠️ CRITICAL STEP 2: Explicitly overrides Better-Auth defaults to let cookies travel
+    // cross-site from localhost to your live Render backend.
+    defaultCookieAttributes: {
+      sameSite: "none",
+      secure: true,
+      partitioned: true, // Follows modern cookie isolation paradigms mandated by modern browsers
+    },
   },
+
   trustedOrigins: [process.env.CLIENT_URL || "http://localhost:3000"],
 
   socialProviders: {
@@ -39,7 +50,6 @@ export const auth = betterAuth({
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url, token }) => {
       try {
-        // ✅ FIX: Using namespaced transactional email client methods directly
         await brevo.transactionalEmails.sendTransacEmail({
           subject: "Reset your EMS Password",
           htmlContent: `
@@ -72,7 +82,6 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     sendVerificationEmail: async ({ user, url, token }) => {
       try {
-        // ✅ FIX: Simplified inline request schema map
         await brevo.transactionalEmails.sendTransacEmail({
           subject: "Verify your EMS Email Address",
           htmlContent: `

@@ -3,7 +3,7 @@ import cors from "cors";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./config/auth";
 import employeeRoutes from "./routes/employee.routes";
-import departmentRoutes from "./routes/department.routes"
+import departmentRoutes from "./routes/department.routes";
 import attendanceRoutes from "./routes/attendance.routes";
 import leaveRoutes from "./routes/leave.routes";
 import analyticsRoutes from "./routes/analytics.routes";
@@ -11,15 +11,18 @@ import analyticsRoutes from "./routes/analytics.routes";
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({ origin: ["http://localhost:3000", "https://ems-server-dsh5.onrender.com"], credentials: true }));
+// ✅ Explicit CORS management to allow credentials from localhost
+app.use(
+  cors({
+    origin: ["http://localhost:3000", "https://ems-server-dsh5.onrender.com"],
+    credentials: true,
+  }),
+);
 
-
+// ✅ Auth middleware MUST run BEFORE express.json()
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
-// ✅ Auth BEFORE express.json() — toNodeHandler reads the raw stream
-app.all("/api/auth/*splat", toNodeHandler(auth));
-
-// ✅ express.json() only for your own routes
+// ✅ Body parser active only for subsequent custom endpoints
 app.use(express.json());
 
 app.use("/api/employees", employeeRoutes);
