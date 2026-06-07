@@ -11,7 +11,7 @@ import analyticsRoutes from "./routes/analytics.routes";
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+app.use(cors({ origin: ["http://localhost:3000", "https://ems-server-dsh5.onrender.com"], credentials: true }));
 
 
 app.all("/api/auth/*splat", toNodeHandler(auth));
