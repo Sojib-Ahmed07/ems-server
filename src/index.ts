@@ -14,7 +14,10 @@ const PORT = process.env.PORT || 5000;
 // ✅ Explicit CORS management to allow credentials from localhost
 app.use(
   cors({
-    origin: ["http://localhost:3000", "https://ems-server-dsh5.onrender.com"],
+    origin: [
+      "http://localhost:3000",
+      "https://ems-client-sable-three.vercel.app",
+    ],
     credentials: true,
   }),
 );

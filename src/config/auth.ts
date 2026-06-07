@@ -13,6 +13,9 @@ const BREVO_SENDER = {
   email: "menarebrave7878@gmail.com",
 };
 
+// Check if we are running live in production
+const isProd = process.env.NODE_ENV === "production";
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
@@ -22,18 +25,22 @@ export const auth = betterAuth({
   basePath: "/api/auth",
 
   advanced: {
-    disableOriginCheck: process.env.NODE_ENV !== "production",
-    // ⚠️ CRITICAL STEP 1: Forces cookies to be flagged as Secure across all environments
-    // so modern browsers accept SameSite=None tracking properties.
-    useSecureCookies: true,
+    disableOriginCheck: !isProd,
 
-    // ⚠️ CRITICAL STEP 2: Explicitly overrides Better-Auth defaults to let cookies travel
-    // cross-site from localhost to your live Render backend.
-    defaultCookieAttributes: {
-      sameSite: "none",
-      secure: true,
-      partitioned: true, // Follows modern cookie isolation paradigms mandated by modern browsers
-    },
+    // 🌐 Dynamic Security Configuration
+    // Forces secure configurations only on live platforms (Render), allowing localhost to accept cookies normally.
+    useSecureCookies: isProd,
+
+    defaultCookieAttributes: isProd
+      ? {
+          sameSite: "none",
+          secure: true,
+          partitioned: true, // Needed for cross-site cookie tracking compliance on Render
+        }
+      : {
+          sameSite: "lax",
+          secure: false, // 🛠️ Essential for local HTTP environments to successfully save the session token
+        },
   },
 
   trustedOrigins: [process.env.CLIENT_URL || "http://localhost:3000"],
