@@ -1,5 +1,5 @@
 generator client {
-  provider     = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -8,8 +8,6 @@ datasource db {
 
 enum Role {
   ADMIN
-  HR
-  MANAGER
   EMPLOYEE
 }
 
@@ -109,15 +107,13 @@ model Department {
 }
 
 model EmployeeProfile {
-  id                String            @id @default(uuid())
-  employeeCode      String            @unique // e.g., "EMP-0001"
-  employmentStatus  EmploymentStatus  @default(PROBATION)
-  joinDate          DateTime          @default(now())
-  userId            String            @unique
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  managerId         String?
-  manager           EmployeeProfile?  @relation("ManagerToEmployee", fields: [managerId], references: [id])
-  subordinates      EmployeeProfile[] @relation("ManagerToEmployee")
+  id               String           @id @default(uuid())
+  employeeCode     String           @unique // e.g., "EMP-0001"
+  employmentStatus EmploymentStatus @default(PROBATION)
+  joinDate         DateTime         @default(now())
+  userId           String           @unique
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   attendanceRecords Attendance[]
   leaveRequests     Leave[]
 

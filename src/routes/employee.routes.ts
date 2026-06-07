@@ -1,13 +1,21 @@
 import { Router } from "express";
-import { syncOrCreateProfile } from "../controllers/employee.controller";
-import { requireAuth } from "../middlewares/auth.middleware";
+import { 
+  syncOrCreateProfile, 
+  getPendingProfiles, 
+  activateProfile 
+} from "../controllers/employee.controller";
+import { requireAuth, requireAdmin } from "../middlewares/auth.middleware";
 
 const router = Router();
 
-// Secure globally: A user must be logged in to initialize their employee profile
+// 🔓 Global Requirement: A user must be logged in to access any endpoint inside this file
 router.use(requireAuth);
 
-// Endpoint used by the frontend upon initialization/dashboard load
+// Base user action endpoint
 router.post("/sync", syncOrCreateProfile);
+
+// 🔒 Admin Isolation: Protect these endpoints exclusively for ADMIN personnel
+router.get("/pending", requireAdmin, getPendingProfiles);
+router.put("/activate/:id", requireAdmin, activateProfile);
 
 export default router;

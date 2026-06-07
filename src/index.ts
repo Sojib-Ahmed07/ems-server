@@ -12,10 +12,6 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 
-app.use("/api/auth", (req, _res, next) => {
-  console.log(`[Auth] ${req.method} ${req.originalUrl}`);
-  next();
-});
 
 app.all("/api/auth/*splat", toNodeHandler(auth));
 

@@ -1,18 +1,23 @@
 import { Router } from "express";
-import { requestLeave, processLeaveApproval } from "../controllers/leave.controller";
-import { requireAuth } from "../middlewares/auth.middleware";
+import { 
+  requestLeave, 
+  processLeaveApproval, 
+  getLeaveBalances, 
+  getPendingLeaves 
+} from "../controllers/leave.controller";
+import { requireAuth, requireAdmin } from "../middlewares/auth.middleware";
 
 const router = Router();
 
-// Secure globally: Authentication baseline is mandatory
+// Secure globally: Authentication baseline is mandatory for all leave paths
 router.use(requireAuth);
 
-// Transaction creation endpoint for general employees
+// Employee Channels
 router.post("/request", requestLeave);
+router.get("/balance/:employeeId", getLeaveBalances);
 
-// Status modification processing pipeline
-// Later we will build a custom role-guard middleware if you need MANAGER/HR specific checks,
-// but for now, we attach this endpoint securely under your core layer.
-router.patch("/:id/approve", processLeaveApproval);
+// Admin-Exclusive Channels
+router.get("/pending", requireAdmin, getPendingLeaves);
+router.patch("/:id/approve", requireAdmin, processLeaveApproval);
 
 export default router;
