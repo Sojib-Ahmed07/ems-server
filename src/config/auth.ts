@@ -35,11 +35,11 @@ export const auth = betterAuth({
       ? {
           sameSite: "none",
           secure: true,
-          partitioned: true, // Needed for cross-site cookie tracking compliance on Render
+          // partitioned removed — breaks OAuth state across redirect chain
         }
       : {
           sameSite: "lax",
-          secure: false, // 🛠️ Essential for local HTTP environments to successfully save the session token
+          secure: false,
         },
   },
 
